@@ -23,12 +23,14 @@ def get(db, pageNumber):
         company['name'] = search_result_link.get("aria-label")
         if (db.does_company_exist(company["name"])): continue
         company["url"] = getCompanyUrl(search_result_link.get("href"))
+        if (company['website'].startswith('http:')):
+            company['website'] = company['website'].replace("http:", "https:")
         companies.append(company)
     
     return companies
 
 
-def parseWholeNiche(db):
+def parseEverything(db):
     for page in range(1, 66):
         for company in get(db, page):
             db.add_company(company['name'], company['url'])

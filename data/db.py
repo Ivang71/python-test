@@ -2,11 +2,10 @@ import sqlite3
 
 
 class JobSearchDatabase:
-    """Manages a database for storing company and messaging state information."""
-
     def __init__(self, db_file="job_search.db"):
         self.db_name = db_file
         self.create_tables()
+
 
     def create_tables(self):
         """Creates tables for companies and messaging state if they don't exist."""
@@ -17,14 +16,15 @@ class JobSearchDatabase:
         CREATE TABLE IF NOT EXISTS companies (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
-          website TEXT
+          website TEXT,
+          emails TEXT
         )
         """)
 
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS messaging_state (
           id INTEGER PRIMARY KEY REFERENCES companies(id),
-          message_state TEXT NOT NULL CHECK(message_state IN ('send_first_email', 'send_followup', 'none')),
+          message_state TEXT NOT NULL CHECK(message_state IN ('send_first_email', 'send_followup', 'client_side_generation', 'none')),
           last_message_date DATE2
         )
         """)
@@ -32,11 +32,11 @@ class JobSearchDatabase:
         conn.commit()
         conn.close()
 
-    def add_company(self, name, url):
-        """Inserts a new company record into the database and creates an initial messaging state entry."""
+
+    def add_company(self, name, url, emails=[]):
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
-        
+
         cursor.execute("""
         SELECT COUNT(*) FROM companies WHERE name = ?
         """, (name,))
@@ -45,9 +45,12 @@ class JobSearchDatabase:
         if count > 0:
             return None
 
+        # Convert email list to comma-separated string for storage
+        email_string = ",".join(emails)
+
         cursor.execute("""
-        INSERT INTO companies (name, website)
-        VALUES (?, ?)""", (name, url))
+        INSERT INTO companies (name, website, emails)
+        VALUES (?, ?, ?)""", (name, url, email_string))
 
         id = cursor.lastrowid  # Get the ID of the newly inserted company
 
@@ -60,16 +63,16 @@ class JobSearchDatabase:
         conn.close()
         return id
 
+
     def get_company(self, id):
-        """Retrieves a company record and its associated messaging state by ID."""
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
 
         cursor.execute("""
-        SELECT c.id, c.name, c.website, ms.message_state, ms.last_message_date
+        SELECT c.id, c.name, c.website, ms.message_state, ms.last_message_date, c.emails
         FROM companies c
         INNER JOIN messaging_state ms ON c.id = ms.id
-        WHERE c.id = ?""", (id,))  # Use a tuple for single value binding
+        WHERE c.id = ?""", (id,))
 
         row = cursor.fetchone()
 
@@ -80,18 +83,19 @@ class JobSearchDatabase:
                 "website": row[2],
                 "message_state": row[3],
                 "last_message_date": row[4],
+                "emails": row[5].split(",")  # Convert comma-separated string back to list
             }
             return company
         else:
             return None  # Return None if company not found
 
+
     def get_companies(self):
-        """Retrieves all companies and their associated messaging state."""
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
 
         cursor.execute("""
-        SELECT c.id, c.name, c.website, ms.message_state, ms.last_message_date
+        SELECT c.id, c.name, c.website, ms.message_state, ms.last_message_date, c.emails
         FROM companies c
         INNER JOIN messaging_state ms ON c.id = ms.id
         """)
@@ -105,14 +109,53 @@ class JobSearchDatabase:
                 "website": row[2],
                 "message_state": row[3],
                 "last_message_date": row[4],
+                "emails": row[5].split(",")  # Convert comma-separated string back to list
             }
             companies.append(company)
 
         conn.close()
         return companies
+    
+    
+    def update_company(self, id, **kwargs):
+        """example update_company(id, emails=["email1@example.com"""
+        conn = sqlite3.connect(self.db_name)
+        cursor = conn.cursor()
 
-    def update_message_state(self, id, new_message_state, last_message_date):
-        valid_states = ("send_first_email", "send_followup", "none")
+        # Check if the company exists
+        cursor.execute("SELECT COUNT(*) FROM companies WHERE id = ?", (id,))
+        count = cursor.fetchone()[0]
+        if count == 0:
+            raise ValueError("Company with ID {} does not exist".format(id))
+
+        update_values = []
+        values = []
+        for field, value in kwargs.items():
+            if field in ("name", "url"):
+                update_values.append(f"{field} = ?")
+                values.append(value)
+            elif field == "emails":
+                if not isinstance(value, list):
+                    raise ValueError(f"Invalid value for 'emails': {value}. Must be a list.")
+                # Convert email list to comma-separated string
+                email_string = ",".join(value)
+                update_values.append(f"emails = ?")
+                values.append(email_string)
+            else:
+                raise ValueError(f"Invalid keyword argument: {field}")
+
+        if update_values:
+            sql = "UPDATE companies SET " + ",".join(update_values) + " WHERE id = ?"
+            values.append(id)
+            cursor.execute(sql, values)
+
+        conn.commit()
+        conn.close()
+
+
+    def update_message_state(self, id, new_message_state):
+        # for now, client_side_generation also marks unreacheable sites
+        valid_states = ("send_first_email", "send_followup", "client_side_generation", "none")
         if new_message_state not in valid_states: 
             raise('invalid message state: %s', new_message_state)
         
@@ -121,12 +164,13 @@ class JobSearchDatabase:
 
         cursor.execute("""
         UPDATE messaging_state
-        SET message_state = ?, last_message_date = ?
-        WHERE id = ?""", (new_message_state, last_message_date, id))
+        SET message_state = ?
+        WHERE id = ?""", (new_message_state, id))
 
         conn.commit()
         conn.close()
         
+    
     def does_company_exist(self, name):
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
