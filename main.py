@@ -1,4 +1,4 @@
-from data.db import JobSearchDatabase
+from data.db import CompaniesDb
 from parsers import niche, Parser
 from llm import Llm
 from search import find_hr_emails
@@ -14,7 +14,7 @@ llm_api_key = os.environ.get('GEMINI_API_KEY')
 
 
 def main():
-    db = JobSearchDatabase()
+    db = CompaniesDb()
     parser = Parser(db)
     llm = Llm(llm_api_key)
     gmail = Gmail()
@@ -27,6 +27,9 @@ def main():
 
     for company in companies:
         print(f"wokring on {company['name']}")
+        
+        if company['id'] > 100:
+            break
         
         # Website text
         site_text = parser.getCompanyText(company)
@@ -58,6 +61,7 @@ def main():
         subject = f"Frontend Developer seeking opportunity at {company['name']}"
         gmail.send(to_email, subject, cover_letter)
         log_email(to_email, subject, cover_letter)
+        company['message_state'] = 'send_first_email'
 
 
 if __name__ == "__main__":

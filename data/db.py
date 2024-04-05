@@ -1,8 +1,8 @@
 import sqlite3
 
 
-class JobSearchDatabase:
-    def __init__(self, db_file="job_search.db"):
+class CompaniesDb:
+    def __init__(self, db_file="companies.db"):
         self.db_name = db_file
         self.create_tables()
 
@@ -187,4 +187,4 @@ class JobSearchDatabase:
 
 
 if __name__ == "__main__":
-    db = JobSearchDatabase()
+    db = CompaniesDb()
