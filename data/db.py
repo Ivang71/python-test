@@ -24,7 +24,7 @@ class JobSearchDatabase:
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS messaging_state (
           id INTEGER PRIMARY KEY REFERENCES companies(id),
-          message_state TEXT NOT NULL CHECK(message_state IN ('send_first_email', 'send_followup', 'client_side_generation', 'none')),
+          message_state TEXT NOT NULL CHECK(message_state IN ('send_first_email', 'send_followup', 'client_side_generation', 'none', 'did_not_find_email')),
           last_message_date DATE2
         )
         """)
@@ -155,7 +155,7 @@ class JobSearchDatabase:
 
     def update_message_state(self, id, new_message_state):
         # for now, client_side_generation also marks unreacheable sites
-        valid_states = ("send_first_email", "send_followup", "client_side_generation", "none")
+        valid_states = ("send_first_email", "send_followup", "client_side_generation", "none", "did_not_find_email")
         if new_message_state not in valid_states: 
             raise('invalid message state: %s', new_message_state)
         
