@@ -6,6 +6,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from email.mime.text import MIMEText
+import email.mime.multipart
+import email.mime.text
 
 
 SCOPES = [
@@ -52,21 +54,40 @@ class Gmail:
         else:
             print(f"Failed to fetch user profile: {response.status_code} - {response.text}")
             return None
-
-
-    def send(self, to, subject, body):
+    
+    
+    def send(self, to, subject, body, attachment_path="resume.pdf"):
         if not self.creds:
             print("Error: No credentials found. Please set up Application Default Credentials.")
             return
         try:
             user = self.get_user_profile()
-            message = MIMEText(body)
+            username = user["name"]
+
+            # Create a multipart message with text and attachment parts
+            message = email.mime.multipart.MIMEMultipart()
             message['to'] = to
-            message['from'] = f'{user["name"]} \u003c{user["email"]}\u003e'
+            message['from'] = f'{username} \u003c{user["email"]}\u003e'
             message['subject'] = subject
+
+            # Create the text body part
+            text_part = email.mime.text.MIMEText(body)
+            message.attach(text_part)
+
+            # Create the attachment part (assuming attachment_path points to a valid PDF)
+            with open(attachment_path, 'rb') as f:
+                pdf_data = f.read()
+            pdf_part = email.mime.base.MIMEBase('application', 'octet-stream')
+            pdf_part.set_payload(pdf_data)
+            email.encoders.encode_base64(pdf_part)
+            pdf_part.add_header('Content-Disposition', f'attachment; filename="{username} resume.pdf"')
+            message.attach(pdf_part)
+
+            # Encode and send the message
             raw = base64.urlsafe_b64encode(message.as_bytes())
             raw = raw.decode()
             message = self.mail_service.users().messages().send(userId='me', body={'raw': raw}).execute()
+
         except HttpError as error:
             print('An error occurred: %s' % error)
         
