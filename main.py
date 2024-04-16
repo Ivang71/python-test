@@ -3,10 +3,10 @@ from parsers import niche, Parser
 from llm import Llm
 from search import find_hr_emails
 from utils import curl, log_email
+from utils.gmail import Gmail
 import re, urllib.parse, time, random, os
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
-from utils.gmail import Gmail
 
 
 load_dotenv()
@@ -17,7 +17,7 @@ def main():
     db = CompaniesDb()
     parser = Parser(db)
     llm = Llm(llm_api_key)
-    gmail = Gmail()
+    gmail = Gmail('QgrcJHsTgszpflPjFXgXBSvjvPxZRdhRjDB')
     # niche.parseEverything(db)
     
     companies = db.get_companies()
@@ -45,7 +45,6 @@ def main():
             continue # couldn't get any emails, skip
         attempts = 5
         while(len(emails) < 1 and attempts > 0):
-            print(len(emails))
             emails = parser.getCompanyEmails(company)
             attempts -= 1
         if len(emails) > 1:

@@ -10,13 +10,21 @@ class Llm:
     
     
     def __prompt(self, prompt) -> str | None:
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + self.api_key
-        headers = {"Content-Type": "application/json"}
-        data = {"contents": [{"parts": [{"text": prompt}]}]}
-        response = requests.post(url, headers=headers, json=data)
-        if response.status_code != 200:
-            return None
-        return response.json()['candidates'][0]['content']['parts'][0]['text']
+        responseText = ''
+        success = False
+        while not success:
+            url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + self.api_key
+            headers = {"Content-Type": "application/json"}
+            data = {"contents": [{"parts": [{"text": prompt}]}]}
+            response = requests.post(url, headers=headers, json=data)
+            if response.status_code != 200:
+                return None
+            try:
+                responseText = response.json()['candidates'][0]['content']['parts'][0]['text']
+                success = True
+            except:
+                success = False
+        return responseText
     
     
     def pickEmails(self, emails: list[str]):
