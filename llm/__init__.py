@@ -42,9 +42,9 @@ class Llm:
     
     
     def writeCoverLetter(self, company_name, resume_text, site_text, email):
-        response = '['
-        while ('[' in response):
-            response = self.__prompt(f'Write a proper concise cover letter for the company {company_name} I\'m cold emailing out of blue.\
+        cover_letter = '['
+        while ('[' in cover_letter):
+            cover_letter = self.__prompt(f'Write a proper concise cover letter for the company {company_name} I\'m cold emailing out of blue.\
                 The length of the letter can be a few paragraphs at max.\
                 Using my resume text: "{resume_text}".\
                 And using text from the company website: "{site_text}".\
@@ -60,7 +60,9 @@ class Llm:
                 Focus on benefit for them, not babble about my experience.\
                 End with clear CTA to contact me.\
                 I\'m sending to the email {email}, if it\'s not an appropriate email, insert apology at the beginning with request to forward to hr.\
-                You\'re response must contain only the cover letter text with no additional comments.')
-        return response
+                Your response must contain only the cover letter text with no additional comments.')
+        compact_letter = self.__prompt(f'Your response must contain only the cover letter text with no additional comments.\nCompress this\
+            \nMake the following cover letter short:\n{cover_letter}')
+        return compact_letter
 
     

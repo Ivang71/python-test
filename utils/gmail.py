@@ -25,24 +25,30 @@ class Gmail:
         self.driver = webdriver.Chrome(options=options)
     
     def send(self, to: str, subject: str, body: str):
-        self.driver.get(f'https://mail.google.com/mail/u/0/#inbox/{self.baseMessageId}')
-        # sleep(5)
-        find = self.driver.find_element
-        try:
-            find(By.XPATH, '//span[@id=":1s"]').click() # forward button
-        except:
-            # print('There is already a draft for forwarding this message')
-            pass
-        find(By.XPATH, "//div[@aria-label='Type of response']").click()
-        find(By.XPATH, "//div[text()='Edit subject']").find_element(By.XPATH, "./parent::*").click()
-        find(By.XPATH, "//div[text()='Recipients']").find_element(By.XPATH, "./parent::*").click()
-        find(By.XPATH, "//input[@aria-label='To recipients']").send_keys(to)
-        subj_el = find(By.XPATH, "//input[@aria-label='Subject']")
-        subj_el.clear()
-        subj_el.send_keys(subject)
-        body_el = find(By.XPATH, "//div[@aria-label='Message Body']")
-        body_el.clear()
-        body_el.send_keys(body)
-        find(By.XPATH, "//div[@aria-label='Send ‪(Ctrl-Enter)‬']").click()
-        sleep(5)
+        sent = False
+        while not sent:
+            try:
+                self.driver.get(f'https://mail.google.com/mail/u/0/#inbox/{self.baseMessageId}')
+                find = self.driver.find_element
+                try:
+                    find(By.XPATH, '//span[@id=":1s"]').click() # forward button
+                except:
+                    # print('There is already a draft for forwarding this message')
+                    pass
+                sleep(2)
+                find(By.XPATH, "//div[@aria-label='Type of response']").click()
+                sleep(2)
+                find(By.XPATH, "//div[text()='Edit subject']").find_element(By.XPATH, "./parent::*").click()
+                find(By.XPATH, "//div[text()='Recipients']").find_element(By.XPATH, "./parent::*").click()
+                find(By.XPATH, "//input[@aria-label='To recipients']").send_keys(to)
+                subj_el = find(By.XPATH, "//input[@aria-label='Subject']")
+                subj_el.clear()
+                subj_el.send_keys(subject)
+                body_el = find(By.XPATH, "//div[@aria-label='Message Body']")
+                body_el.clear()
+                body_el.send_keys(body)
+                find(By.XPATH, "//div[@aria-label='Send ‪(Ctrl-Enter)‬']").click()
+                sent = True
+            except:
+                sent = False
 

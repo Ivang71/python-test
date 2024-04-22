@@ -1,7 +1,9 @@
 from utils import curl
 from bs4 import BeautifulSoup
 from urllib.parse import quote_plus
-import re, time, random
+import re
+from time import sleep
+from random import randint
 
 class Parser:
     db = None
@@ -30,9 +32,20 @@ class Parser:
         while(len(emails) < 4 and i < len(keywords)):
             query = f"{keywords[i]} @{domain}"
             searchResult = curl(f'https://www.google.com/search?q={quote_plus(query)}')
+            # if '<H1>302 Moved</H1>' in searchResult:
+            #     print('googling too often')
+            if len(searchResult) < 1e4:
+                print('Triggered captcha')
+                sleep(randint(67, 89))
+                continue # start this iteration again
             emails.extend(list(set(re.findall(r'\b[a-z.]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b', searchResult))))
             i += 1
-            time.sleep(random.randint(1, 2))
+            print(f'searched {query}, emails {emails}')
+            sleep(randint(4, 7))
+            
+        if emails:
+            forbidden_emails = ['last', '.doe']
+            emails = [email for email in emails if email not in forbidden_emails]
         
         return emails if emails else None
     
